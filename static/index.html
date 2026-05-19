@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Altin</title>
+    <style>
+      /* Eliminate all default padding/margin and hide scrollbars */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: #000000;
+      }
+
+      /* Force canvas to behave like a block element and fill the viewport */
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="isoCanvas"></canvas>
+
+    <script>
+      ////////////
+      // SOCKET //
+      ////////////
+
+      // Establish connection to the Go WebSocket server
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const socket = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
+
+      socket.addEventListener("open", () => {
+        // Construct the data payload
+        const payload = {
+          event: "client_greet",
+          text: "Hello from the browser!",
+        };
+
+        // Convert object to a string and send it
+        socket.send(JSON.stringify(payload));
+      });
+
+      // Triggered when the connection is successfully opened
+      socket.addEventListener("open", (event) => {
+        console.log("Connected to the WebSocket server.");
+      });
+
+      // Triggered when a new message is received from the server
+      socket.addEventListener("message", (event) => {
+        try {
+          // Parse the incoming JSON string into a JavaScript object
+          const jsonObject = JSON.parse(event.data);
+          console.log("Received JSON data:", jsonObject);
+
+          // Example: Accessing the properties sent by Go
+          console.log(`Status: ${jsonObject.status}, Data: ${jsonObject.data}`);
+        } catch (error) {
+          console.error("Error parsing JSON:", error);
+        }
+      });
+
+      // Triggered when the connection is closed
+      socket.addEventListener("close", (event) => {
+        console.log("Connection closed:", event.reason);
+      });
+
+      // Triggered when an error occurs
+      socket.addEventListener("error", (error) => {
+        console.error("WebSocket Error:", error);
+      });
+
+      ////////////
+      // CANVAS //
+      ////////////
+
+      const canvas = document.getElementById("isoCanvas");
+      const ctx = canvas.getContext("2d");
+
+      // Grid Configuration
+      const gridSize = 21;
+      const tileWidth = 128; // Width of the isometric diamond
+      const tileHeight = 64; // Height of the isometric diamond (2:1 ratio)
+
+      // Color palette for the grid
+      const strokeColor = "#444444";
+      const fillColors = ["#1a2a1a", "#1f331f"]; // Checkerboard pattern tones
+
+      /**
+       * Resizes the canvas buffer to match the window size accurately
+       * and triggers a redraw to keep the grid perfectly centered.
+       */
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        drawGrid();
+      }
+
+      /**
+       * Converts standard 2D grid coordinates (row, col) into
+       * Isometric screen coordinates (x, y).
+       */
+      function isoProject(col, row) {
+        const isoX = (col - row) * (tileWidth / 2);
+        const isoY = (col + row) * (tileHeight / 2);
+        return { x: isoX, y: isoY };
+      }
+
+      /**
+       * Renders the entire 21x21 grid centered on the canvas.
+       */
+      function drawGrid() {
+        // Clear the canvas with absolute black
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Calculate the total pixel dimensions of the isometric bounding area
+        const totalWidth =
+          (gridSize - 1) * (tileWidth / 2) -
+          (0 - (gridSize - 1)) * (tileWidth / 2);
+        const totalHeight = (gridSize + gridSize) * (tileHeight / 2);
+
+        // Find the center offsets to pin the grid to the middle of the screen
+        const offsetX = canvas.width / 2;
+        const offsetY = (canvas.height - totalHeight) / 2 + tileHeight / 2;
+
+        // Draw the grid from back to front (row by row, col by col)
+        for (let r = 0; r < gridSize; r++) {
+          for (let c = 0; c < gridSize; c++) {
+            // Get screen coordinates for the top corner of the current tile
+            const screenPos = isoProject(c, r);
+            const cx = screenPos.x + offsetX;
+            const cy = screenPos.y + offsetY;
+
+            // Draw the diamond shape
+            ctx.beginPath();
+            ctx.moveTo(cx, cy); // Top corner
+            ctx.lineTo(cx + tileWidth / 2, cy + tileHeight / 2); // Right corner
+            ctx.lineTo(cx, cy + tileHeight); // Bottom corner
+            ctx.lineTo(cx - tileWidth / 2, cy + tileHeight / 2); // Left corner
+            ctx.closePath();
+
+            // Apply a subtle checkerboard pattern fill
+            ctx.fillStyle = fillColors[(r + c) % 2];
+            ctx.fill();
+
+            // Draw the grid lines
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Event Listeners for dynamic window resizing
+      window.addEventListener("resize", resizeCanvas);
+
+      // Initial invocation to set up dimensions and draw on load
+      resizeCanvas();
+    </script>
+  </body>
+</html>
