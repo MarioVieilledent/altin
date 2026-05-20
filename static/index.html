@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="wasm_exec.js"></script>
     <title>Altin</title>
     <style>
       /* Eliminate all default padding/margin and hide scrollbars */
@@ -28,54 +29,6 @@
     <canvas id="isoCanvas"></canvas>
 
     <script>
-      ////////////
-      // SOCKET //
-      ////////////
-
-      // Establish connection to the Go WebSocket server
-      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const socket = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
-
-      socket.addEventListener("open", () => {
-        // Construct the data payload
-        const payload = {
-          event: "client_greet",
-          text: "Hello from the browser!",
-        };
-
-        // Convert object to a string and send it
-        socket.send(JSON.stringify(payload));
-      });
-
-      // Triggered when the connection is successfully opened
-      socket.addEventListener("open", (event) => {
-        console.log("Connected to the WebSocket server.");
-      });
-
-      // Triggered when a new message is received from the server
-      socket.addEventListener("message", (event) => {
-        try {
-          // Parse the incoming JSON string into a JavaScript object
-          const jsonObject = JSON.parse(event.data);
-          console.log("Received JSON data:", jsonObject);
-
-          // Example: Accessing the properties sent by Go
-          console.log(`Status: ${jsonObject.status}, Data: ${jsonObject.data}`);
-        } catch (error) {
-          console.error("Error parsing JSON:", error);
-        }
-      });
-
-      // Triggered when the connection is closed
-      socket.addEventListener("close", (event) => {
-        console.log("Connection closed:", event.reason);
-      });
-
-      // Triggered when an error occurs
-      socket.addEventListener("error", (error) => {
-        console.error("WebSocket Error:", error);
-      });
-
       ////////////
       // CANVAS //
       ////////////
@@ -158,11 +111,86 @@
         }
       }
 
+      /**
+       * Draws the map
+       */
+      function drawMap(game) {
+        console.log(game.name);
+        drawGrid(game.map);
+      }
+
       // Event Listeners for dynamic window resizing
       window.addEventListener("resize", resizeCanvas);
 
       // Initial invocation to set up dimensions and draw on load
       resizeCanvas();
+
+      //////////
+      // WASM //
+      //////////
+
+      const go = new Go();
+      WebAssembly.instantiateStreaming(
+        fetch("altin.wasm"),
+        go.importObject,
+      ).then((result) => {
+        go.run(result.instance);
+
+        window.onMessage((gameString) => {
+          let game = JSON.parse(gameString);
+          drawMap(game);
+        });
+
+        console.log(window.createGame("Testing game!", 3));
+      });
+
+      ////////////
+      // SOCKET //
+      ////////////
+
+      // Establish connection to the Go WebSocket server
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const socket = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
+
+      socket.addEventListener("open", () => {
+        // Construct the data payload
+        const payload = {
+          event: "client_greet",
+          text: "Hello from the browser!",
+        };
+
+        // Convert object to a string and send it
+        socket.send(JSON.stringify(payload));
+      });
+
+      // Triggered when the connection is successfully opened
+      socket.addEventListener("open", (event) => {
+        console.log("Connected to the WebSocket server.");
+      });
+
+      // Triggered when a new message is received from the server
+      socket.addEventListener("message", (event) => {
+        try {
+          // Parse the incoming JSON string into a JavaScript object
+          const jsonObject = JSON.parse(event.data);
+          console.log("Received JSON data:", jsonObject);
+
+          // Example: Accessing the properties sent by Go
+          console.log(`Status: ${jsonObject.status}, Data: ${jsonObject.data}`);
+        } catch (error) {
+          console.error("Error parsing JSON:", error);
+        }
+      });
+
+      // Triggered when the connection is closed
+      socket.addEventListener("close", (event) => {
+        console.log("Connection closed:", event.reason);
+      });
+
+      // Triggered when an error occurs
+      socket.addEventListener("error", (error) => {
+        console.error("WebSocket Error:", error);
+      });
     </script>
   </body>
 </html>

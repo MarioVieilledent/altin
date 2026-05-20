@@ -5,10 +5,7 @@ import (
 )
 
 func TestGameSimulation(t *testing.T) {
-	g := Game{
-		Map:     NewMap(21),
-		Players: make([]Player, 1),
-	}
+	g := newGame("Test game", 21)
 
 	g.start()
 

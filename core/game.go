@@ -5,6 +5,7 @@ import (
 )
 
 type Game struct {
+	Name    string   `json:"name"`
 	Map     Map      `json:"map"`
 	Players []Player `json:"players"`
 	Tick    uint64   `json:"tick"`
@@ -14,6 +15,16 @@ type Game struct {
 type Log struct {
 	Timestamp time.Time `json:"timestamp"`
 	Message   string    `json:"message"`
+}
+
+func newGame(name string, mapSize int32) *Game {
+	return &Game{
+		Name:    name,
+		Map:     NewMap(mapSize),
+		Players: make([]Player, 1),
+		Tick:    0,
+		Logs:    make([]Log, 0),
+	}
 }
 
 func (g *Game) log(message string) {
