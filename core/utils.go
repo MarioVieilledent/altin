@@ -1,8 +1,8 @@
-package main
+package core
 
 import "encoding/json"
 
-func toJson(v any) []byte {
+func ToJson(v any) []byte {
 	json, err := json.Marshal(v)
 	if err != nil {
 		return []byte("Error while Marshalling JSON")
@@ -10,7 +10,7 @@ func toJson(v any) []byte {
 	return json
 }
 
-func toJsonString(v any) string {
+func ToJsonString(v any) string {
 	json, err := json.Marshal(v)
 	if err != nil {
 		return "Error while Marshalling JSON"

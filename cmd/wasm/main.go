@@ -1,13 +1,15 @@
 package main
 
 import (
+	"altin/core"
+	"log"
 	"syscall/js"
 	"time"
 )
 
 // A global placeholder to keep track of our JavaScript listener
 var jsListener js.Value
-var game Game
+var game *core.Game
 
 func registerListener(this js.Value, args []js.Value) any {
 	if len(args) < 1 || args[0].Type() != js.TypeFunction {
@@ -21,8 +23,8 @@ func createGame(this js.Value, args []js.Value) any {
 	if len(args) == 2 &&
 		args[0].Type() == js.TypeString &&
 		args[1].Type() == js.TypeNumber {
-		game = *newGame("Test game", 21)
-		return toJsonString(game)
+		game = core.NewGame("Test game", 21)
+		return core.ToJsonString(game)
 	}
 	return "Wrong args"
 }
@@ -33,8 +35,9 @@ func main() {
 	js.Global().Set("createGame", js.FuncOf(createGame))
 
 	go func() {
-		time.Sleep(time.Second)
-		jsListener.Invoke(toJsonString(game))
+		time.Sleep(200 * time.Millisecond)
+		log.Println(jsListener.Type().String())
+		jsListener.Invoke(js.ValueOf(core.ToJsonString(game)))
 	}()
 
 	// Keep the Go program alive

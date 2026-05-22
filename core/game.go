@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"time"
@@ -17,11 +17,11 @@ type Log struct {
 	Message   string    `json:"message"`
 }
 
-func newGame(name string, mapSize int32) *Game {
+func NewGame(name string, mapSize int32) *Game {
 	return &Game{
 		Name:    name,
 		Map:     NewMap(mapSize),
-		Players: make([]Player, 1),
+		Players: []Player{},
 		Tick:    0,
 		Logs:    make([]Log, 0),
 	}

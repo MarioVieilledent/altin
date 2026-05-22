@@ -1,4 +1,4 @@
-package main
+package core
 
 type Resources struct {
 	Wood   int32 `json:"wood"`

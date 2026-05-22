@@ -1,4 +1,4 @@
-package main
+package core
 
 // Terrain
 const WATER = 0

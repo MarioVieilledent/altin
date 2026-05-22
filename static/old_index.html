@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="wasm_exec.js"></script>
+    <title>Altin</title>
+    <style>
+      /* Eliminate all default padding/margin and hide scrollbars */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: #000000;
+      }
+
+      /* Force canvas to behave like a block element and fill the viewport */
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="isoCanvas"></canvas>
+
+    <script>
+      //////////
+      // GAME //
+      //////////
+      let game = null;
+
+      ////////////
+      // CANVAS //
+      ////////////
+      const canvas = document.getElementById("isoCanvas");
+      const ctx = canvas.getContext("2d");
+
+      // States variables
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let currentX = 0;
+      let currentY = 0;
+
+      // Images
+      const npcImage = new Image();
+      npcImage.src = "./images/npc.webp";
+
+      // Grid Configuration
+      const tileWidth = 128; // Width of the isometric diamond
+      const tileHeight = 64; // Height of the isometric diamond (2:1 ratio)
+
+      // Color palette for the grid
+      const strokeColor = "#444444";
+      const fillColors = ["#1a2a1a", "#1f331f"]; // Checkerboard pattern tones
+
+      /**
+       * Resizes the canvas buffer to match the window size accurately
+       * and triggers a redraw to keep the grid perfectly centered.
+       */
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        drawIsoMap();
+      }
+
+      /**
+       * Converts standard 2D grid coordinates (row, col) into
+       * Isometric screen coordinates (x, y).
+       */
+      function isoProject(col, row, gridSize) {
+        // Calculate the total pixel dimensions of the isometric bounding area
+        const totalWidth =
+          (gridSize - 1) * (tileWidth / 2) -
+          (0 - (gridSize - 1)) * (tileWidth / 2);
+        const totalHeight = (gridSize + gridSize) * (tileHeight / 2);
+
+        // Find the center offsets to pin the grid to the middle of the screen
+        const offsetX = canvas.width / 2;
+        const offsetY = (canvas.height - totalHeight) / 2 + tileHeight / 2;
+
+        const isoX = (col - row) * (tileWidth / 2) + offsetX;
+        const isoY = (col + row) * (tileHeight / 2) + offsetY;
+
+        return { x: isoX, y: isoY };
+      }
+
+      /**
+       * Renders the entire 21x21 grid centered on the canvas.
+       */
+      function drawIsoMap() {
+        const gridSize = game?.map.size ?? 6;
+
+        // Clear the canvas with absolute black
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw the grid from back to front (row by row, col by col)
+        for (let r = 0; r < gridSize; r++) {
+          for (let c = 0; c < gridSize; c++) {
+            // Get screen coordinates for the top corner of the current tile
+            const screenPos = isoProject(c, r, gridSize);
+            const cx = screenPos.x;
+            const cy = screenPos.y;
+
+            // Draw the diamond shape
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy); // Top corner
+            ctx.lineTo(cx + tileWidth / 2, cy + tileHeight / 2); // Right corner
+            ctx.lineTo(cx, cy + tileHeight); // Bottom corner
+            ctx.lineTo(cx - tileWidth / 2, cy + tileHeight / 2); // Left corner
+            ctx.closePath();
+
+            // Apply a subtle checkerboard pattern fill
+            ctx.fillStyle = fillColors[(r + c) % 2];
+            ctx.fill();
+
+            // Draw the grid lines
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+
+        // Draw structures
+
+        // Draw units
+        if (game) {
+          game.players.forEach((player) => {
+            player.units.forEach((unit) => {
+              const unitPos = isoProject(unit.x, unit.y, game.map.size);
+              ctx.drawImage(npcImage, unitPos.x, unitPos.y, 32, 32);
+            });
+          });
+        }
+
+        // Draw selection rectangle
+        if (isDragging) {
+          drawSelectionRectangle();
+        }
+      }
+
+      function drawSelectionRectangle() {
+        // Calculate box dimensions
+        const width = currentX - startX;
+        const height = currentY - startY;
+
+        // 1. Draw a transparent blue fill (Windows/RTS style)
+        ctx.fillStyle = "rgba(0, 0, 0, 0)";
+        ctx.fillRect(startX, startY, width, height);
+
+        // 2. Draw thin stripped (dashed) border
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1;
+
+        // [dash length, space length] -> creates the "stripped" look
+        ctx.setLineDash([4, 4]);
+
+        ctx.strokeRect(startX, startY, width, height);
+      }
+
+      // Get exact mouse position relative to the canvas bounding box
+      function getMousePos(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: Math.round(e.clientX - rect.left),
+          y: Math.round(e.clientY - rect.top),
+        };
+      }
+
+      canvas.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        const pos = getMousePos(e);
+        startX = pos.x;
+        startY = pos.y;
+        currentX = pos.x;
+        currentY = pos.y;
+      });
+
+      canvas.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+
+        const pos = getMousePos(e);
+        currentX = pos.x;
+        currentY = pos.y;
+
+        // Redraw scene
+        drawIsoMap();
+      });
+
+      window.addEventListener("mouseup", (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+
+        // Final normalization to account for dragging backwards (bottom-right to top-left)
+        const xFrom = Math.min(startX, currentX);
+        const xTo = Math.max(startX, currentX);
+        const yFrom = Math.min(startY, currentY);
+        const yTo = Math.max(startY, currentY);
+
+        drawIsoMap();
+      });
+
+      // Event Listeners for dynamic window resizing
+      window.addEventListener("resize", resizeCanvas);
+
+      // Initial invocation to set up dimensions and draw on load
+      resizeCanvas();
+
+      //////////
+      // WASM //
+      //////////
+
+      /*
+      const go = new Go();
+      WebAssembly.instantiateStreaming(
+        fetch("altin.wasm"),
+        go.importObject,
+      ).then((result) => {
+        go.run(result.instance);
+
+        window.onMessage((gameString) => {
+          game = JSON.parse(gameString);
+          console.alert(game);
+          drawGrid();
+        });
+
+        window.createGame("Testing game!", 3);
+      });
+      */
+
+      ////////////
+      // SOCKET //
+      ////////////
+
+      // Establish connection to the Go WebSocket server
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const socket = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
+
+      socket.addEventListener("open", () => {
+        // Construct the data payload
+        const payload = {
+          event: "client_greet",
+          text: "Hello from the browser!",
+        };
+
+        // Convert object to a string and send it
+        socket.send(JSON.stringify(payload));
+      });
+
+      // Triggered when the connection is successfully opened
+      socket.addEventListener("open", (event) => {
+        console.log("Connected to the WebSocket server.");
+      });
+
+      // Triggered when a new message is received from the server
+      socket.addEventListener("message", (event) => {
+        try {
+          game = JSON.parse(event.data);
+          console.log(game);
+          drawIsoMap();
+        } catch (error) {
+          console.error("Error parsing JSON:", error);
+        }
+      });
+
+      // Triggered when the connection is closed
+      socket.addEventListener("close", (event) => {
+        console.log("Connection closed:", event.reason);
+      });
+
+      // Triggered when an error occurs
+      socket.addEventListener("error", (error) => {
+        console.error("WebSocket Error:", error);
+      });
+    </script>
+  </body>
+</html>

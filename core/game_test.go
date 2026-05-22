@@ -1,17 +1,17 @@
-package main
+package core
 
 import (
 	"testing"
 )
 
 func TestGameSimulation(t *testing.T) {
-	g := newGame("Test game", 21)
+	g := NewGame("Test game", 21)
 
 	g.start()
 
 	player1 := &g.Players[0]
 	player1.Name = "Gaïa"
-	player1.spawnUnit(*newVillager())
+	player1.spawnUnit(*NewVillager())
 
 	player1.setResources(
 		50, 0, 0, 0,

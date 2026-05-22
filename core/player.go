@@ -1,11 +1,19 @@
-package main
+package core
 
 import "fmt"
 
 type Player struct {
 	Name      string    `json:"name"`
 	Resources Resources `json:"resources"`
-	Units     []Unit    `json:"Units"`
+	Units     []Unit    `json:"units"`
+}
+
+func NewPlayer(name string) *Player {
+	return &Player{
+		Name:      name,
+		Resources: Resources{0, 0, 0, 0},
+		Units:     make([]Unit, 0),
+	}
 }
 
 func (p *Player) spawnUnit(unit Unit) {

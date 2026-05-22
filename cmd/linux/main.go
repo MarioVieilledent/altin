@@ -1,6 +1,7 @@
 package main
 
 import (
+	"altin/core"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/gorilla/websocket"
 )
+
+var game *core.Game
 
 // Define the JSON structure to send to the frontend
 type Message struct {
@@ -39,31 +42,23 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	// Launch the outbound writer in a separate goroutine so it doesn't block reading
 	go func() {
-		// Example loop: Send a JSON message every 3 seconds
 		for {
-			payload := Message{
-				Status:    "success",
-				Timestamp: time.Now(),
-				Data:      "Hello from the Go backend!",
-			}
-
 			// Serialize the struct to JSON
-			jsonMessage, err := json.Marshal(payload)
+			jsonGame, err := json.Marshal(*game)
 			if err != nil {
 				log.Println("JSON marshal error:", err)
 				break
 			}
 
 			// Send the JSON as a text message
-			err = conn.WriteMessage(websocket.TextMessage, jsonMessage)
+			err = conn.WriteMessage(websocket.TextMessage, jsonGame)
 			if err != nil {
 				log.Println("Write error:", err)
 				break
 			}
 
-			time.Sleep(3 * time.Second)
+			time.Sleep(2000 * time.Millisecond)
 		}
 	}()
 
@@ -88,6 +83,11 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// 0. Create a game
+	game = core.NewGame("Testing game", 21)
+	game.Players = append(game.Players, *core.NewPlayer("Test Player 1"))
+	game.Players[0].Units = append(game.Players[0].Units, *core.NewVillager())
+
 	// 1. Serve static files (HTML, JS, CSS) from the "static" directory
 	// Root URL "/" will look for "index.html" inside the "./static" folder
 	fileServer := http.FileServer(http.Dir("./static"))
