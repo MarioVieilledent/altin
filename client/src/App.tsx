@@ -2,9 +2,11 @@ import { useMemo, useState } from "react";
 import GameCanvas from "./GameCanvas";
 import type { Game } from "./types";
 import { Socket } from "./socket";
+import Lobby from "./Lobby";
 
 function App() {
   const [game, setGame] = useState<Game | undefined>(undefined);
+  const [currentPage, setCurrentPage] = useState<"lobby" | "inGame">("lobby");
 
   const socket = useMemo<Socket>(
     () =>
@@ -14,13 +16,11 @@ function App() {
     [],
   );
 
-  if (game) {
+  if (currentPage === "inGame") {
     return <GameCanvas game={game} />;
   } else {
     return (
-      <div>
-        <p>No game revieved from server.</p>
-      </div>
+      <Lobby socket={socket} game={game} setCurrentPage={setCurrentPage} />
     );
   }
 }

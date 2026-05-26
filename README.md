@@ -36,7 +36,7 @@ cd client && npm i
 Or alternatively,
 
 ```
-go run ./cmd/linux/main.go
+go run ./cmd/os/main.go
 ```
 
 ### Client
@@ -49,8 +49,12 @@ cd client && npm run dev
 
 ```
 /cmd (build targets)
-    /linux
+    /os
         main.go
+        /static (served frontend dist files)
+            index.html
+            /assets
+                ...
     /wasm
         main.go
 
@@ -65,8 +69,5 @@ cd client && npm run dev
         App.tsx
     /public
         ...
-    index.html
-
-/static (served frontend dist files)
     index.html
 ```

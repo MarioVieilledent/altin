@@ -62,6 +62,7 @@ export default function GameCanvas({ game }: { game: Game }) {
    * Converts Isometric screen coordinates (x, y) back into
    * standard 2D grid coordinates (row, col).
    */
+  /*
   function isoUnproject(
     x: number,
     y: number,
@@ -82,6 +83,7 @@ export default function GameCanvas({ game }: { game: Game }) {
 
     return { col, row };
   }
+    */
 
   /**
    * Renders the entire 21x21 grid centered on the canvas.current.
