@@ -509,7 +509,11 @@ const css = `
   }
 `;
 
-function MapPreview({ size }) {
+interface MapPreviewProps {
+  size: number;
+}
+
+function MapPreview({ size }: MapPreviewProps) {
   const canvasSize = 96;
   const tileSize = Math.max(1, Math.floor(canvasSize / size));
   const cols = Math.floor(canvasSize / tileSize);
@@ -550,7 +554,12 @@ function MapPreview({ size }) {
   );
 }
 
-function AddGameForm({ onAdd, onCancel }) {
+interface AddGameFormProps {
+  onAdd: (a: string, b: number) => void;
+  onCancel: React.MouseEventHandler;
+}
+
+function AddGameForm({ onAdd, onCancel }: AddGameFormProps) {
   const [name, setName] = useState("");
   const [mapSize, setMapSize] = useState(64);
 
@@ -637,7 +646,13 @@ const COLORS = [
   "#c8c8c8",
 ];
 
-function GameDetail({ game, onClose, setCurrentPage }) {
+interface GameDetailProps {
+  game: Game;
+  onClose: React.MouseEventHandler;
+  setCurrentPage: any;
+}
+
+function GameDetail({ game, onClose, setCurrentPage }: GameDetailProps) {
   const [players, setPlayers] = useState(
     Array.from({ length: 2 }, (_, i) => ({
       name: i === 0 ? "Player 1" : "",
@@ -645,7 +660,7 @@ function GameDetail({ game, onClose, setCurrentPage }) {
     })),
   );
 
-  const updatePlayer = (i, field, value) => {
+  const updatePlayer = (i: number, field: string, value: string) => {
     setPlayers((prev) =>
       prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)),
     );
@@ -658,7 +673,7 @@ function GameDetail({ game, onClose, setCurrentPage }) {
           <div className="game-detail-title">
             {game.name}
             <span>
-              Map: {game.mapSize} × {game.mapSize}
+              Map: {game.map.size} × {game.map.size}
             </span>
           </div>
           <button className="aoe-btn" onClick={onClose}>
@@ -716,7 +731,7 @@ function GameDetail({ game, onClose, setCurrentPage }) {
 
           <div style={{ flex: 1, minWidth: 140 }}>
             <div className="panel-title">Map</div>
-            <MapPreview size={game.mapSize} />
+            <MapPreview size={game.map.size} />
             <div
               style={{
                 marginTop: 8,
@@ -725,7 +740,7 @@ function GameDetail({ game, onClose, setCurrentPage }) {
                 fontStyle: "italic",
               }}
             >
-              {game.mapSize}×{game.mapSize} tiles
+              {game.map.size}×{game.map.size} tiles
             </div>
           </div>
         </div>
@@ -751,7 +766,7 @@ function GameDetail({ game, onClose, setCurrentPage }) {
 
 interface LobbyProps {
   socket: Socket;
-  game: Game;
+  game: Game | null;
   setCurrentPage: React.Dispatch<React.SetStateAction<"lobby" | "inGame">>;
 }
 
@@ -766,10 +781,10 @@ export default function Lobby({ socket, game, setCurrentPage }: LobbyProps) {
     socket.send({ name, mapSize });
   };
 
-  const handleSelectGame = (g) => {
+  const handleSelectGame = (g: Game) => {
     setSelectedGame(g);
     setShowCreate(false);
-    setStatusMsg(`Joined "${g.name}" — ${g.mapSize}×${g.mapSize} map.`);
+    setStatusMsg(`Joined "${g.name}" — ${g.map.size}×${g.map.size} map.`);
   };
 
   return (
@@ -820,7 +835,7 @@ export default function Lobby({ socket, game, setCurrentPage }: LobbyProps) {
       )}
 
       {/* Main panels (list + create button) — always visible if no game selected */}
-      {!selectedGame && !showCreate && (
+      {selectedGame === null && !showCreate && (
         <div className="main-layout">
           {/* Game list */}
           <div className="game-list-panel">
@@ -837,7 +852,7 @@ export default function Lobby({ socket, game, setCurrentPage }: LobbyProps) {
                 {game && (
                   <li
                     key={game.name}
-                    className={`game-row${selectedGame.name === game.name ? " selected" : ""}`}
+                    className="game-row"
                     onClick={() => handleSelectGame(game)}
                   >
                     <span className="game-name">⚔ {game.name}</span>

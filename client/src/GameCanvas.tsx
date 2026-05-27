@@ -15,11 +15,15 @@ const npcImage = new Image();
 npcImage.src = npc;
 
 export default function GameCanvas({ game }: { game: Game }) {
-  const canvas = useRef(null);
-  const ctx = useRef(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const ctx = useRef<CanvasRenderingContext2D>(null);
+
+  const [canvasWidth, setCanvasWidth] = useState(0);
+  const [canvasHeight, setCanvasHeight] = useState(0);
 
   const gridSize = game.map.size;
 
+  // For selection
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [startX, setStartX] = useState<number>(0);
   const [startY, setStartY] = useState<number>(0);
@@ -31,8 +35,12 @@ export default function GameCanvas({ game }: { game: Game }) {
    * and triggers a redraw to keep the grid perfectly centered.
    */
   function resizeCanvas() {
-    canvas.current.width = window.innerWidth;
-    canvas.current.height = window.innerHeight;
+    if (canvas.current) {
+      setCanvasWidth(window.innerWidth);
+      setCanvasHeight(window.innerHeight);
+      canvas.current.width = window.innerWidth;
+      canvas.current.height = window.innerHeight;
+    }
     drawIsoMap();
   }
 
@@ -49,8 +57,8 @@ export default function GameCanvas({ game }: { game: Game }) {
     const totalHeight = (gridSize + gridSize) * (tileHeight / 2);
 
     // Find the center offsets to pin the grid to the middle of the screen
-    const offsetX = canvas.current.width / 2;
-    const offsetY = (canvas.current.height - totalHeight) / 2 + tileHeight / 2;
+    const offsetX = canvasWidth / 2;
+    const offsetY = (canvasHeight - totalHeight) / 2 + tileHeight / 2;
 
     const isoX = (col - row) * (tileWidth / 2) + offsetX;
     const isoY = (col + row) * (tileHeight / 2) + offsetY;
@@ -89,73 +97,79 @@ export default function GameCanvas({ game }: { game: Game }) {
    * Renders the entire 21x21 grid centered on the canvas.current.
    */
   function drawIsoMap() {
-    // Clear the canvas with absolute black
-    ctx.current.fillStyle = "#000000";
-    ctx.current.fillRect(0, 0, canvas.current.width, canvas.current.height);
+    if (ctx.current && canvas.current) {
+      // Clear the canvas with absolute black
+      ctx.current.fillStyle = "#000000";
+      ctx.current.fillRect(0, 0, canvas.current.width, canvas.current.height);
 
-    // Draw the grid from back to front (row by row, col by col)
-    for (let r = 0; r < gridSize; r++) {
-      for (let c = 0; c < gridSize; c++) {
-        // Get screen coordinates for the top corner of the current tile
-        const screenPos = isoProject(c, r, gridSize);
-        const cx = screenPos.x;
-        const cy = screenPos.y;
+      // Draw the grid from back to front (row by row, col by col)
+      for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+          // Get screen coordinates for the top corner of the current tile
+          const screenPos = isoProject(c, r, gridSize);
+          const cx = screenPos.x;
+          const cy = screenPos.y;
 
-        // Draw the diamond shape
-        ctx.current.setLineDash([]);
-        ctx.current.beginPath();
-        ctx.current.moveTo(cx, cy); // Top corner
-        ctx.current.lineTo(cx + tileWidth / 2, cy + tileHeight / 2); // Right corner
-        ctx.current.lineTo(cx, cy + tileHeight); // Bottom corner
-        ctx.current.lineTo(cx - tileWidth / 2, cy + tileHeight / 2); // Left corner
-        ctx.current.closePath();
+          // Draw the diamond shape
+          ctx.current.setLineDash([]);
+          ctx.current.beginPath();
+          ctx.current.moveTo(cx, cy); // Top corner
+          ctx.current.lineTo(cx + tileWidth / 2, cy + tileHeight / 2); // Right corner
+          ctx.current.lineTo(cx, cy + tileHeight); // Bottom corner
+          ctx.current.lineTo(cx - tileWidth / 2, cy + tileHeight / 2); // Left corner
+          ctx.current.closePath();
 
-        // Apply a subtle checkerboard pattern fill
-        ctx.current.fillStyle = fillColors[(r + c) % 2];
-        ctx.current.fill();
+          // Apply a subtle checkerboard pattern fill
+          ctx.current.fillStyle = fillColors[(r + c) % 2];
+          ctx.current.fill();
 
-        // Draw the grid lines
-        ctx.current.strokeStyle = strokeColor;
-        ctx.current.lineWidth = 0.5;
-        ctx.current.stroke();
+          // Draw the grid lines
+          ctx.current.strokeStyle = strokeColor;
+          ctx.current.lineWidth = 0.5;
+          ctx.current.stroke();
+        }
       }
-    }
 
-    // Draw structures
+      // Draw structures
 
-    // Draw units
-    if (game) {
-      game.players.forEach((player) => {
-        player.units.forEach((unit) => {
-          const unitPos = isoProject(unit.x, unit.y, game.map.size);
-          ctx.current.drawImage(npcImage, unitPos.x, unitPos.y, 32, 32);
+      // Draw units
+      if (game) {
+        game.players.forEach((player) => {
+          player.units.forEach((unit) => {
+            const unitPos = isoProject(unit.x, unit.y, game.map.size);
+            if (ctx.current) {
+              ctx.current.drawImage(npcImage, unitPos.x, unitPos.y, 32, 32);
+            }
+          });
         });
-      });
-    }
+      }
 
-    // Draw selection rectangle
-    if (isDragging) {
-      drawSelectionRectangle();
+      // Draw selection rectangle
+      if (isDragging) {
+        drawSelectionRectangle();
+      }
     }
   }
 
   function drawSelectionRectangle() {
-    // Calculate box dimensions
-    const width = currentX - startX;
-    const height = currentY - startY;
+    if (ctx.current) {
+      // Calculate box dimensions
+      const width = currentX - startX;
+      const height = currentY - startY;
 
-    // 1. Draw a transparent blue fill (Windows/RTS style)
-    ctx.current.fillStyle = "rgba(0, 0, 0, 0)";
-    ctx.current.fillRect(startX, startY, width, height);
+      // 1. Draw a transparent blue fill (Windows/RTS style)
+      ctx.current.fillStyle = "rgba(0, 0, 0, 0)";
+      ctx.current.fillRect(startX, startY, width, height);
 
-    // 2. Draw thin stripped (dashed) border
-    ctx.current.strokeStyle = "#ffffff";
-    ctx.current.lineWidth = 1;
+      // 2. Draw thin stripped (dashed) border
+      ctx.current.strokeStyle = "#ffffff";
+      ctx.current.lineWidth = 1;
 
-    // [dash length, space length] -> creates the "stripped" look
-    ctx.current.setLineDash([4, 4]);
+      // [dash length, space length] -> creates the "stripped" look
+      ctx.current.setLineDash([4, 4]);
 
-    ctx.current.strokeRect(startX, startY, width, height);
+      ctx.current.strokeRect(startX, startY, width, height);
+    }
   }
 
   function isInsideSelection({ x, y }: { x: number; y: number }): boolean {
@@ -177,12 +191,15 @@ export default function GameCanvas({ game }: { game: Game }) {
   }
 
   // Get exact mouse position relative to the canvas bounding box
-  function getMousePos(e: MouseEvent) {
-    const rect = canvas.current.getBoundingClientRect();
-    return {
-      x: Math.round(e.clientX - rect.left),
-      y: Math.round(e.clientY - rect.top),
-    };
+  function getMousePos(e: MouseEvent): { x: number; y: number } {
+    if (canvas.current) {
+      const rect = canvas.current.getBoundingClientRect();
+      return {
+        x: Math.round(e.clientX - rect.left),
+        y: Math.round(e.clientY - rect.top),
+      };
+    }
+    return { x: 0, y: 0 };
   }
 
   const mouseupHandler = () => {

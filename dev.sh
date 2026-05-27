@@ -3,4 +3,4 @@ set -euo pipefail
 
 # Build Go WebAssembly target
 GOOS=linux GOARCH=amd64 \
-go run ./cmd/linux/main.go
+go run ./cmd/os/main.go

@@ -5,7 +5,7 @@ import { Socket } from "./socket";
 import Lobby from "./Lobby";
 
 function App() {
-  const [game, setGame] = useState<Game | undefined>(undefined);
+  const [game, setGame] = useState<Game | null>(null);
   const [currentPage, setCurrentPage] = useState<"lobby" | "inGame">("lobby");
 
   const socket = useMemo<Socket>(
@@ -16,7 +16,7 @@ function App() {
     [],
   );
 
-  if (currentPage === "inGame") {
+  if (currentPage === "inGame" && game) {
     return <GameCanvas game={game} />;
   } else {
     return (

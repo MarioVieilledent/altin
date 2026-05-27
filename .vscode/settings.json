@@ -1,6 +1,12 @@
 {
-  "go.toolsEnvVars": {
-    "GOOS": "linux",
-    "GOARCH": "amd64"
-  }
+  "gopls": {
+    "build.buildFlags": ["-tags=linux,js,wasm"],
+    "settings": {
+      "go.toolsEnvVars": {
+        "GOOS": "linux",
+        "GOARCH": "amd64"
+      }
+    }
+  },
+  "typescript.tsdk": "client/node_modules/typescript/lib"
 }
